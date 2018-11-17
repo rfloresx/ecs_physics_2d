@@ -24,6 +24,7 @@ typedef float EcsVector2D[2];
 typedef float EcsAABB[4];
 
 typedef float EcsMatrix3x3[3][3];
+#define EcsMatrix3x3_Identity() {{1,0,0},{0,1,0},{0,0,0}}
 
 /**
  * 
@@ -42,6 +43,9 @@ typedef struct EcsCollisionInfo {
  *  [2] : EcsPolygonCollider (Can be NULL)
  */
 typedef void* EcsColliderData[3];
+#define EcsColliderData_Vector2(pColliderData) ((EcsVector2D*)((*pColliderData)[0]))
+#define EcsColliderData_Circle(pColliderData) ((EcsCircleCollider*)((*pColliderData)[1]))
+#define EcsColliderData_Polygon(pColliderData) ((EcsPolygonCollider*)((*pColliderData)[2]))
 
 int8_t EcsColliderData_getAABB(EcsColliderData *collider, EcsAABB *aabb_out);
 int8_t EcsAABBTest(EcsAABB *a, EcsAABB *b);
@@ -60,6 +64,8 @@ float EcsVector2D_distance(EcsVector2D* vector_a, EcsVector2D *vector_b);
 float EcsVector2D_distanceSqrt(EcsVector2D* vector_a, EcsVector2D *vector_b);
 float EcsVector2D_angle(EcsVector2D* vector_a, EcsVector2D *vector_b);
 
+void EcsMatrix3x3_add_rotation(EcsMatrix3x3 *matrix, float rad);
+void EcsMatrix3x3_add_translation(EcsMatrix3x3 *matrix, EcsVector2D *translation);
 int8_t EcsMatrix3x3_transform(EcsMatrix3x3 *matrix, EcsVector2D *src, EcsVector2D *dest, size_t size);
 
 #ifdef __cplusplus

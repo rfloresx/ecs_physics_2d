@@ -125,7 +125,7 @@ int8_t EcsVector2D_add(EcsVector2D* vector_a, EcsVector2D *vector_b, EcsVector2D
         return false;
     }
     VECTOR_X(vector_out) = VECTOR_X(vector_a) + VECTOR_X(vector_b);
-    VECTOR_Y(vector_out) = VECTOR_X(vector_a) + VECTOR_Y(vector_b);
+    VECTOR_Y(vector_out) = VECTOR_Y(vector_a) + VECTOR_Y(vector_b);
     return true;
 }
 
@@ -166,6 +166,22 @@ float EcsVector2D_angle(EcsVector2D* vector_a, EcsVector2D *vector_b) {
 }
 
 #define MATRIX_GET(matrix, x, y) ((*matrix)[x][y])
+void EcsMatrix3x3_add_rotation(EcsMatrix3x3 *matrix, float rad) 
+{
+    float c = cos(rad);
+    float s = sin(rad);
+    MATRIX_GET(matrix, 0, 0) = c;
+    MATRIX_GET(matrix, 0, 1) = -s;
+    MATRIX_GET(matrix, 1, 0) = s;
+    MATRIX_GET(matrix, 1, 1) = c;
+}
+
+void EcsMatrix3x3_add_translation(EcsMatrix3x3 *matrix, EcsVector2D *translation)
+{
+    MATRIX_GET(matrix, 0, 2) += VECTOR_X(translation);
+    MATRIX_GET(matrix, 1, 2) += VECTOR_Y(translation);
+}
+
 int8_t EcsMatrix3x3_transform(EcsMatrix3x3 *matrix, EcsVector2D *src, EcsVector2D *dest, size_t size)
 {
     if (matrix == NULL || src == NULL || dest == NULL) {
