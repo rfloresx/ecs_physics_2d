@@ -3,8 +3,8 @@
 #include "private.h"
 #include <math.h>
 
-#define AXIS_MIN(minMax) (minMax[0])
-#define AXIS_MAX(minMax) (minMax[1])
+#define AXIS_MIN(minMax) ((minMax)[0])
+#define AXIS_MAX(minMax) ((minMax)[1])
 
 static int8_t EcsPhysis2dCollisionCheckCircleCircle(
     ColliderData_t *circle_a, 
@@ -64,9 +64,9 @@ int8_t EcsPhysis2dCollisionCheck(
         }
     } else {
         if (type_a == CIRCLE) {
-            return EcsPhysis2dCollisionCheckCirclePolygonSat((ColliderData_t*)collider_a, (ColliderData_t*)collider_b, false, collision_out);
+            return EcsPhysis2dCollisionCheckCirclePolygonSat((ColliderData_t*)collider_a, (ColliderData_t*)collider_b, true, collision_out);
         } 
-        return EcsPhysis2dCollisionCheckCirclePolygonSat((ColliderData_t*)collider_b, (ColliderData_t*)collider_a, true, collision_out);
+        return EcsPhysis2dCollisionCheckCirclePolygonSat((ColliderData_t*)collider_b, (ColliderData_t*)collider_a, false, collision_out);
     }
     return false;
 }
@@ -82,6 +82,7 @@ static int8_t EcsPhysis2dCollisionCheckCircleCircle(
         return false;
     }
     EcsVector2D_sub(circle_b->position, circle_a->position, &(collision_out->direction));
+    EcsVector2D_normalize(&(collision_out->direction), &(collision_out->direction));
     collision_out->distance = sqrtf(distSqrt)-totalRadius;
     return true;
 }
@@ -94,11 +95,11 @@ static int8_t EcsPhysis2dCollisionCheckPolygonSat(
     EcsPoint vertices_a[128];
     EcsPoint vertices_b[128];
     EcsMatrix3x3 transfor = {{1,0, VECTOR_X(polygon_a->position)}, {0,1, VECTOR_Y(polygon_a->position)}, {0,0,1}};
-
+    
     EcsMatrix3x3_transform(&transfor, polygon_a->polygon->points, vertices_a, polygon_a->polygon->points_count);
     transfor[0][2] = VECTOR_X(polygon_b->position);
     transfor[1][2] = VECTOR_Y(polygon_b->position);
-    EcsMatrix3x3_transform(&transfor, polygon_a->polygon->points, vertices_b, polygon_b->polygon->points_count);
+    EcsMatrix3x3_transform(&transfor, polygon_b->polygon->points, vertices_b, polygon_b->polygon->points_count);
 
     collision_out->distance = INFINITY;
     if (EcsPhysis2dCollisionCheckPolygonSatAxis(vertices_a, polygon_a->polygon->points_count,
@@ -130,41 +131,41 @@ static int8_t EcsPhysis2dCollisionCheckCirclePolygonSat(
     EcsVector2D minMaxA;
     EcsVector2D minMaxB;
 
-    EcsPhysis2d_getClosestPoint(polygon->position, vertices_a, size_a, &closestPoint);
-    EcsVector2D_sub(polygon->position, &closestPoint, &axis);
+    EcsPhysis2d_getClosestPoint(circle->position, vertices_a, size_a, &closestPoint);
+    EcsVector2D_sub(circle->position, &closestPoint, &axis);
     EcsVector2D_normalize(&axis, &axis);
 
     EcsPhysis2d_getProjection(&axis, vertices_a, size_a, &minMaxA);
-    EcsPhysis2d_getProjectionCircle(&axis, polygon->position, polygon->circle->radius, &minMaxB);
+    EcsPhysis2d_getProjectionCircle(&axis, circle->position, circle->circle->radius, &minMaxB);
 
     //max0 < min1 || max1 < min0 
     if (AXIS_MAX(minMaxA) < AXIS_MIN(minMaxB) || AXIS_MAX(minMaxB) < AXIS_MIN(minMaxA)) {
-        return INFINITY;
+        return false;
     }
-
+    collision_out->distance = INFINITY;
     EcsPhysis2dCollisionCheckAxisSat(&axis, &minMaxA, &minMaxB, collision_out);
 
     for (int8_t i = 0; i < size_a; i++){
-        EcsVector2D_sub(&vertices_a[i], &vertices_a[(i+1) < size_a ? (i+1) : 0], &axis);
+        EcsVector2D_sub(&vertices_a[(i+1) < size_a ? (i+1) : 0], &vertices_a[i], &axis);
         EcsVector2D_get_normal(&axis, &axis);
         EcsVector2D_normalize(&axis, &axis);
-        if (invert) {
-            EcsPhysis2d_getProjection(&axis, vertices_a, size_a, &minMaxB);
-            EcsPhysis2d_getProjectionCircle(&axis, polygon->position, polygon->circle->radius, &minMaxA);
-        } else {
-            EcsPhysis2d_getProjection(&axis, vertices_a, size_a, &minMaxA);
-            EcsPhysis2d_getProjection(&axis, polygon->position, polygon->circle->radius, &minMaxB);
-        }
         
+        EcsPhysis2d_getProjection(&axis, vertices_a, size_a, &minMaxA);
+        EcsPhysis2d_getProjectionCircle(&axis, circle->position, circle->circle->radius, &minMaxB);
+    
         //max0 < min1 || max1 < min0 
         if (AXIS_MAX(minMaxA) < AXIS_MIN(minMaxB) || AXIS_MAX(minMaxB) < AXIS_MIN(minMaxA)) {
-            return INFINITY;
+            return false;
         }
 
         EcsPhysis2dCollisionCheckAxisSat(&axis, &minMaxA, &minMaxB, collision_out);
     }
 
-    return false;
+    if (invert) {
+        EcsVector2D_scale(&(collision_out->direction), -1, &(collision_out->direction));
+    }
+
+    return true;
 }
 
 static float EcsPhysis2dCollisionCheckPolygonSatAxis(
@@ -177,7 +178,7 @@ static float EcsPhysis2dCollisionCheckPolygonSatAxis(
     EcsVector2D minMaxB;
 
     for (int8_t i = 0; i < size_a; i++){
-        EcsVector2D_sub(&vertices_a[i], &vertices_a[(i+1) < size_a ? (i+1) : 0], &axis);
+        EcsVector2D_sub(&vertices_a[(i+1) < size_a ? (i+1) : 0], &vertices_a[i], &axis);
         EcsVector2D_get_normal(&axis, &axis);
         EcsVector2D_normalize(&axis, &axis);
         if (invert) {
@@ -205,21 +206,21 @@ static void EcsPhysis2dCollisionCheckAxisSat(
     EcsCollisionInfo *collision_out)
 {
     float distmin;
-    if (AXIS_MIN(minMaxA) < AXIS_MIN(minMaxB)) {
-        distmin = AXIS_MIN(minMaxB) - AXIS_MAX(minMaxA);
+    if (AXIS_MIN(*minMaxA) < AXIS_MIN(*minMaxB)) {
+        distmin = AXIS_MIN(*minMaxB) - AXIS_MAX(*minMaxA);
         if (distmin < 0) {
             distmin = -distmin;
             EcsVector2D_scale(axis, -1, axis);
         }
     } else {
-        distmin = AXIS_MIN(minMaxA) - AXIS_MAX(minMaxB);
+        distmin = AXIS_MIN(*minMaxA) - AXIS_MAX(*minMaxB);
         if (distmin < 0) {
             distmin = -distmin;
         } else {
             EcsVector2D_scale(axis, -1, axis);
         }
     }
-    if (distmin < collision_out->distance) {
+    if (distmin <= collision_out->distance) {
         collision_out->distance = distmin;
         collision_out->direction[0] = (*axis)[0];
         collision_out->direction[1] = (*axis)[1];

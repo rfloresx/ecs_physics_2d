@@ -1,0 +1,13 @@
+{
+    "id":"test",
+    "type":"executable",
+    "value": {
+        "use": [
+            "reflecs",
+            "physics_2d"
+        ],
+        "lib":[
+            "SDL2"
+        ]
+    }
+}

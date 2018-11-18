@@ -134,7 +134,7 @@ int8_t EcsVector2D_sub(EcsVector2D* vector_a, EcsVector2D *vector_b, EcsVector2D
         return false;
     }
     VECTOR_X(vector_out) = VECTOR_X(vector_a) - VECTOR_X(vector_b);
-    VECTOR_Y(vector_out) = VECTOR_X(vector_a) - VECTOR_Y(vector_b);
+    VECTOR_Y(vector_out) = VECTOR_Y(vector_a) - VECTOR_Y(vector_b);
     return true;
 }
 
